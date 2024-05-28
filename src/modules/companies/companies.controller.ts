@@ -13,10 +13,10 @@ import {
   ParseIntPipe,
 } from '@nestjs/common';
 
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { UUID } from 'crypto';
 import { RolesGuard } from 'src/guards/roles.guard';
-import { CreateCompaniesDto, UpdateCompaniesDto } from './companies.dto';
+import { CompaniesResponse, CreateCompaniesDto, UpdateCompaniesDto } from './companies.dto';
 import { AuthGuard } from 'src/guards/auth.guard';
 import { Role } from 'src/models/roles.enum';
 import { Roles } from 'src/decorators/roles.decorator';
@@ -34,18 +34,22 @@ export class CompaniesController {
 
   @Roles(Role.SUPERADMIN)
   @UseGuards(RolesGuard)
+  @ApiQuery({ name: 'name', required: false })
+  @ApiQuery({ name: 'page', required: false })
+  @ApiQuery({ name: 'limit', required: false })
+  @ApiQuery({ name: 'status', required: false })
   @Get()
-  getAllCompanies(
-    @Query('status', new DefaultValuePipe(CompanyStatus.ACTIVE))
-    status: CompanyStatus,
-    @Query('name') name: string,
+  async getAllCompanies(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(6), ParseIntPipe) limit: number,
+    @Query('status', new DefaultValuePipe(CompanyStatus.ACTIVE))
+    status: CompanyStatus,
+    @Query('name') name?: string,
   ) {
-    return this.companiesService.getAllCompanies(status, name, page, limit);
+    return await this.companiesService.getAllCompanies(status, page, limit, name) as CompaniesResponse;
   }
 
-  // Por pedido hacer nuevo endpoint son filtros ni paginacion 
+  // Por pedido hacer nuevo endpoint son filtros ni paginacion
   @Roles(Role.SUPERADMIN)
   @UseGuards(RolesGuard)
   @Get('all')
@@ -83,11 +87,17 @@ export class CompaniesController {
     @Param('companyId', ParseUUIDPipe) companyId: UUID,
     @Param('userId', ParseUUIDPipe) userId: UUID,
     @Body() changes: UpdateEmployeeDto,
-    @Req() request){
-      const adminCompany = request.user;
-      return this.companiesService.updateEmployee(adminCompany, companyId, userId, changes)
-    }
-  
+    @Req() request,
+  ) {
+    const adminCompany = request.user;
+    return this.companiesService.updateEmployee(
+      adminCompany,
+      companyId,
+      userId,
+      changes,
+    );
+  }
+
   @Roles(Role.ADMIN_COMPANY, Role.SUPERADMIN)
   @UseGuards(RolesGuard)
   @Put(':id')

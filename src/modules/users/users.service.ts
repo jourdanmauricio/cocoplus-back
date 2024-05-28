@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { CreateUsersDto, UpdateDto, UpdateUsersDto } from './users.dto';
 import * as bcrypt from 'bcrypt';
 import { Users } from 'src/entities/users.entity';
@@ -9,7 +13,6 @@ import { Role } from 'src/models/roles.enum';
 import { UpdateBookingsDto } from '../bookings/bookings.dto';
 import { BookingStatus } from 'src/models/bookingStatus';
 import { BookingsService } from '../bookings/bookings.service';
-import { NodemailerService } from '../nodemailer/nodemailer.service';
 import { UserStatus } from 'src/models/userStatus.enum';
 
 @Injectable()
@@ -18,7 +21,6 @@ export class UsersService {
     @InjectRepository(Users)
     private usersRepository: Repository<Users>,
     private readonly bookingsService: BookingsService,
-    private readonly nodemailerService: NodemailerService,
   ) { }
 
   async create(data: CreateUsersDto) {
@@ -38,8 +40,7 @@ export class UsersService {
     page?: number,
     limit?: number,
   ) {
-
-     const where: FindOptionsWhere<Users> = {};
+    const where: FindOptionsWhere<Users> = {};
 
     if (status) where.status = status;
     if (name) where.name = name;
@@ -68,66 +69,81 @@ export class UsersService {
   async findOne(id: UUID) {
     const user = await this.usersRepository.findOne({
       where: { id },
-      relations: ['coworkings', 'employee', 'employee.company'],
+      relations: ['coworkings', 'employee', 'employee.company', 'bookings'],
     });
 
     if (!user) throw new BadRequestException('Usuario no encontrado');
     return user;
   }
 
-  async updateBooking (userId: UUID, bookingId: UUID, changes: UpdateBookingsDto) {
+  async updateBooking(
+    userId: UUID,
+    bookingId: UUID,
+    changes: UpdateBookingsDto,
+  ) {
     console.log(userId, bookingId, changes);
-    const booking = await this.bookingsService.findOne(bookingId)
-    if (booking.user.id !== userId) throw new ForbiddenException('No tienes permisos para modificar esta resevación')
+    const booking = await this.bookingsService.findOne(bookingId);
+    if (booking.user.id !== userId)
+      throw new ForbiddenException(
+        'No tienes permisos para modificar esta resevación',
+      );
 
-    if (booking.status !== BookingStatus.PENDING) 
-      throw new BadRequestException('El estado de la reserva no se puede modificar')
+    if (booking.status !== BookingStatus.PENDING)
+      throw new BadRequestException(
+        'El estado de la reserva no se puede modificar',
+      );
 
     if (changes.status !== BookingStatus.USER_CANCELED) {
-      throw new BadRequestException('El estado de la reserva no se puede modificar')
+      throw new BadRequestException(
+        'El estado de la reserva no se puede modificar',
+      );
     }
 
     //!mail a coworking y a empleado  que  se actulizo la reserva
-    //? Hacer prueba 
-    
-    const updBooking = await this.bookingsService.update(bookingId, changes)
-    return updBooking
+    //? Hacer prueba
+
+    const updBooking = await this.bookingsService.update(bookingId, changes);
+    return updBooking;
   }
 
   async checkIn(userId: UUID, bookingId: UUID) {
+    const booking = await this.bookingsService.findOne(bookingId);
+    if (booking.user.id !== userId)
+      throw new ForbiddenException(
+        'No tienes permisos para modificar esta resevación',
+      );
 
-    const booking = await this.bookingsService.findOne(bookingId)
-    if (booking.user.id !== userId) throw new ForbiddenException('No tienes permisos para modificar esta resevación')
+    if (booking.status !== BookingStatus.ACTIVE)
+      throw new BadRequestException(
+        `El estado de la reserva esta en:${booking.status},no se puede modificar`,
+      );
 
-    if (booking.status !== BookingStatus.ACTIVE) 
-      throw new BadRequestException(`El estado de la reserva esta en:${booking.status },no se puede modificar`)
-
-    booking.confirmUser=true
-    if(booking.confirmCoworking===true){
+    booking.confirmUser = true;
+    if (booking.confirmCoworking === true) {
       //* Pasa el estado a complete
-      booking.status= BookingStatus.COMPLETED
-      
+      booking.status = BookingStatus.COMPLETED;
+
       //!Descuenta los pases una vez  completo
       // if(booking.user.employee.passesAvailable<=0){
       //     throw new BadRequestException("El cliente no tiene pases disponibles")
       // }
       // booking.user.employee.passesAvailable  =  booking.user.employee.passesAvailable-1
     }
-    const updBooking = await this.bookingsService.update(bookingId, booking)
-    return updBooking
+    const updBooking = await this.bookingsService.update(bookingId, booking);
+    return updBooking;
     // verificar si bookingif "ACTIVO"
     // user_confirm = true
     // Verifica si coworking_confirm = true => pasa estado a Completed
   }
 
-
   async update(id: UUID, changes: UpdateUsersDto) {
-     const user = await this.findOne(id);
+    const user = await this.findOne(id);
 
-     if (changes.password) {
+    if (changes.password) {
       const hashedPass = await bcrypt.hash(changes.password, 10);
       changes = { ...changes, password: hashedPass };
-      if (!user.activationDate) changes = { ...changes, activationDate: new Date() };
+      if (!user.activationDate)
+        changes = { ...changes, activationDate: new Date() };
     }
 
     const updUser = this.usersRepository.merge(user, changes);
@@ -136,9 +152,8 @@ export class UsersService {
 
   //! Actualiza el susuario sin contraseña
   async updateUser(id: UUID, changes: UpdateDto) {
-
-  const user = await this.findOne(id);
-  const updUser = this.usersRepository.merge(user, changes);
-  return this.usersRepository.save(updUser);
- }
+    const user = await this.findOne(id);
+    const updUser = this.usersRepository.merge(user, changes);
+    return this.usersRepository.save(updUser);
+  }
 }
