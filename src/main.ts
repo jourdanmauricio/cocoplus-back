@@ -19,6 +19,7 @@ async function bootstrap() {
     .setTitle('Coco+')
     .setDescription('API construida para el backend de la aplicación Coco+')
     .setVersion('1.0')
+    .addBearerAuth()
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
