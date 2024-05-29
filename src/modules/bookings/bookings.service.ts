@@ -33,7 +33,7 @@ export class BookingsService {
     @InjectRepository(Employees)
     private employeesRepository: Repository<Employees>,
     private readonly nodemailerService: NodemailerService,
-  ) {}
+  ) { }
 
   async findAll() {
     const bookings = await this.bookingsRepository.find();
@@ -78,7 +78,6 @@ export class BookingsService {
       );
     }
     //! Descontar pases
-    console.log('entra a descontar pases');
 
     const employee = await this.employeesRepository.findOneBy({
       id: user.employee.id,
