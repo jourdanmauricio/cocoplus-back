@@ -10,7 +10,7 @@ export class CountryService {
   constructor(
     @InjectRepository(Country)
     private countryRepository: Repository<Country>,
-  ) {}
+  ) { }
 
   async getAllCountries() {
     const countries = await this.countryRepository.find();

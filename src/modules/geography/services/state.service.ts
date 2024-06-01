@@ -14,9 +14,19 @@ export class StateService {
   ) { }
 
   async getAllStates() {
-    const states = await this.stateRepository.find({ relations: ['country'] });
-    console.log("states", states);
-    return states;
+    const states = await this.stateRepository.find({
+      relations: ['country'],
+      select: {
+        id: true,
+        name: true,
+        lat: true,
+        long: true,
+        country: {
+          id: true,
+        },
+      },
+    });
+    return states.map(state => ({ ...state, countryId: state.country.id }));
   }
 
   async getStateByName(name: string) {

@@ -13,7 +13,7 @@ import { ApiTags } from '@nestjs/swagger';
 @ApiTags('Geography')
 @Controller('countries')
 export class CountryController {
-  constructor(private readonly countryService: CountryService) {}
+  constructor(private readonly countryService: CountryService) { }
 
   @Get()
   getAllCountries() {

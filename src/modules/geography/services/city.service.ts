@@ -14,8 +14,19 @@ export class CityService {
   ) { }
 
   async getAllCities() {
-    const cities = await this.cityRepository.find({ relations: ['state'] });
-    return cities;
+    const cities = await this.cityRepository.find({
+      relations: ['state'], select: {
+        id: true,
+        name: true,
+        lat: true,
+        long: true,
+        state: {
+          id: true,
+        },
+      },
+    });
+    return cities.map(city => ({ ...city, stateId: city.state.id }));
+
   }
 
   async getCity(id: number) {
